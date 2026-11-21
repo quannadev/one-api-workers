@@ -419,6 +419,24 @@
     "detailEndpoint": "Endpoint",
     "detailChannel": "Channel"
   },
+  "mediaPlayground": {
+    "jevNeedsChannel": "Configure typesafe/jev-router on an accessible OpenRouter channel before sending.",
+    "task": "Task",
+    "chat": "Chat",
+    "otherTasks": "Images, audio and reranking",
+    "imageGeneration": "Generate image",
+    "imageEdit": "Edit image",
+    "speech": "Text to speech",
+    "transcription": "Transcribe audio",
+    "translation": "Translate audio",
+    "rerank": "Rerank",
+    "optional": "optional",
+    "tokenModelRequired": "Select an API token and model.",
+    "fileRequired": "Select a file for {{field}}.",
+    "sending": "Sending…",
+    "response": "Response",
+    "generatedImage": "Generated image"
+  },
   "apiTest": {
     "title": "Playground",
     "description": "Debug multi-turn conversations with a selected token, model, and channel",

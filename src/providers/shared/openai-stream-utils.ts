@@ -52,6 +52,7 @@ export const checkoutUsageData = async (
     saveUsage: (usage: Usage) => Promise<void>,
     response: Response | OpenAIResponse,
     requestBody?: any,
+    chargeRequestWithoutUsage = false,
 ): Promise<void> => {
     try {
         if (response instanceof Response) {
@@ -64,12 +65,21 @@ export const checkoutUsageData = async (
             }
 
             if (!contentType.includes("application/json")) {
+                if (chargeRequestWithoutUsage) await saveUsage({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 })
                 return
             }
 
             const res = await response.clone().json() as OpenAIResponse
-            if (!res.usage) return;
-            await saveUsage(res.usage)
+            if (!res.usage) {
+                if (chargeRequestWithoutUsage) await saveUsage({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 })
+                return
+            }
+            const usage = res.usage as Usage & { input_tokens?: number; output_tokens?: number }
+            await saveUsage(chargeRequestWithoutUsage ? {
+                ...usage,
+                prompt_tokens: usage.prompt_tokens ?? usage.input_tokens ?? 0,
+                completion_tokens: usage.completion_tokens ?? usage.output_tokens ?? 0,
+            } : usage)
             return
         }
 

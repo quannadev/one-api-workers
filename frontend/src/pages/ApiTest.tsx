@@ -47,6 +47,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useTranslation } from 'react-i18next'
+import { MediaPlayground } from './MediaPlayground'
+import { buildPlaygroundCurl } from '@/lib/playground-requests'
 
 type RequestBodyShape = Record<string, unknown>
 type ChatEndpoint = '/v1/chat/completions' | '/v1/messages'
@@ -238,6 +240,7 @@ export function ApiTest() {
   const streamSwitchId = `${baseId}-stream`
 
   const [endpoint, setEndpoint] = useState<ChatEndpoint>('/v1/chat/completions')
+  const [mode, setMode] = useState('chat')
   const [apiToken, setApiToken] = useState('')
   const [modelValue, setModelValue] = useState('')
   const [channelKey, setChannelKey] = useState('')
@@ -338,6 +341,9 @@ export function ApiTest() {
   })
 
   const modelOptions: AutoCompleteOption[] = availableModelNames.map((model) => ({ value: model }))
+  if (apiToken && !availableModelNames.includes('typesafe/jev-router')) {
+    modelOptions.push({ value: 'typesafe/jev-router', description: t('mediaPlayground.jevNeedsChannel') })
+  }
 
   const channelOptions: AutoCompleteOption[] = availableChannels.map((channel) => {
     const config = parseChannelConfig(channel)
@@ -760,6 +766,16 @@ export function ApiTest() {
 
   const streamParam = visibleParamDefinitions.find((param) => param.type === 'boolean')
   const numericParams = visibleParamDefinitions.filter((param) => param.type === 'number')
+  let chatCurl = ''
+  try {
+    const pendingMessage: PlaygroundMessage = {
+      id: 'pending', role: 'user', content: inputValue, createdAt: 0, status: 'success',
+    }
+    const payload = buildRequestPayload([...messages, pendingMessage])
+    chatCurl = buildPlaygroundCurl(import.meta.env.VITE_API_BASE_URL || window.location.origin, endpoint, apiToken, channelKey, payload)
+  } catch {
+    // The request editor may contain incomplete JSON while typing.
+  }
 
   return (
     <PageContainer
@@ -767,6 +783,13 @@ export function ApiTest() {
       description={t('apiTest.description')}
     >
       <TooltipProvider delayDuration={150}>
+        <div className="mb-4 max-w-xs space-y-1">
+          <Label htmlFor={baseId + '-mode'}>{t('mediaPlayground.task')}</Label>
+          <Select id={baseId + '-mode'} value={mode} onChange={(event) => setMode(event.target.value)} disabled={isLoading}>
+            <option value="chat">{t('mediaPlayground.chat')}</option>
+            <option value="media">{t('mediaPlayground.otherTasks')}</option>
+          </Select>
+        </div>
         <span className="sr-only" role="status" aria-live="polite">
           {copyAnnouncement}
         </span>
@@ -797,7 +820,7 @@ export function ApiTest() {
           </DialogContent>
         </Dialog>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)] items-start">
+        {mode === 'chat' ? <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)] items-start">
           <Card>
             <CardContent className="p-4 space-y-3.5">
               <div className="flex items-center justify-between gap-2">
@@ -839,10 +862,13 @@ export function ApiTest() {
                     placeholder={apiToken ? t('apiTest.modelPlaceholder') : t('apiTest.selectTokenFirst')}
                     inputClassName="h-9 font-mono text-xs"
                     options={modelOptions}
-                    maxOptions={availableModelNames.length}
+                    maxOptions={modelOptions.length}
                     emptyText={apiToken ? t('apiTest.noMatchingModels') : t('apiTest.selectTokenFirst')}
                     disabled={!apiToken}
                   />
+                  {modelValue === 'typesafe/jev-router' && !availableModelNames.includes(modelValue) && (
+                    <p className="text-xs text-muted-foreground">{t('mediaPlayground.jevNeedsChannel')}</p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -954,6 +980,13 @@ export function ApiTest() {
                     className="font-mono text-xs leading-relaxed"
                   />
                 )}
+              </div>
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <Label>cURL</Label>
+                  <IconActionButton label={t('common.copy')} disabled={!chatCurl} onClick={() => void copyWithFeedback('curl', chatCurl)}><Copy aria-hidden="true" /></IconActionButton>
+                </div>
+                <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted p-2 font-mono text-xs">{chatCurl || t('apiTest.bodyJsonError')}</pre>
               </div>
             </CardContent>
           </Card>
@@ -1214,7 +1247,7 @@ export function ApiTest() {
               </form>
             </CardContent>
           </Card>
-        </div>
+        </div> : <MediaPlayground />}
       </TooltipProvider>
     </PageContainer>
   )

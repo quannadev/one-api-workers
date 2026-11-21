@@ -20,11 +20,12 @@ const buildProxyRequest = (
             "api-key": apiKey,
         },
     })
+    if (reqJson instanceof FormData) targetHeaders.delete("content-type")
 
     return new Request(targetUrl, {
         method: request.method,
         headers: targetHeaders,
-        body: JSON.stringify(reqJson),
+        body: reqJson instanceof FormData ? reqJson : JSON.stringify(reqJson),
     })
 }
 
@@ -68,7 +69,9 @@ export default {
         }
 
         if (response.ok) {
-            await checkoutUsageData(saveUsage, response, requestBody)
+            const path = new URL(c.req.url).pathname
+            const chargeRequestWithoutUsage = path.includes('/images/') || path.endsWith('/audio/transcriptions') || path.endsWith('/audio/translations') || path.endsWith('/rerank')
+            await checkoutUsageData(saveUsage, response, requestBody, chargeRequestWithoutUsage)
         }
 
         return response

@@ -419,6 +419,24 @@
     "detailEndpoint": "端点",
     "detailChannel": "渠道"
   },
+  "mediaPlayground": {
+    "jevNeedsChannel": "发送前请在可访问的 OpenRouter 渠道中配置 typesafe/jev-router。",
+    "task": "任务",
+    "chat": "对话",
+    "otherTasks": "图像、音频和重排序",
+    "imageGeneration": "生成图像",
+    "imageEdit": "编辑图像",
+    "speech": "文本转语音",
+    "transcription": "音频转录",
+    "translation": "音频翻译",
+    "rerank": "重排序",
+    "optional": "可选",
+    "tokenModelRequired": "请选择 API 令牌和模型。",
+    "fileRequired": "请选择 {{field}} 文件。",
+    "sending": "发送中…",
+    "response": "响应",
+    "generatedImage": "生成的图像"
+  },
   "apiTest": {
     "title": "操练场",
     "description": "用指定令牌、模型和渠道进行多轮会话调试",

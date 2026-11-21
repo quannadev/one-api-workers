@@ -1,5 +1,5 @@
 import { Context, Hono } from "hono"
-import { contentJson, fromHono, OpenAPIRoute } from 'chanfana';
+import { fromHono, OpenAPIRoute } from 'chanfana';
 import { z } from "zod";
 
 import db from "../db"
@@ -23,7 +23,10 @@ class UnifiedProxyEndpoint extends OpenAPIRoute {
                 'Authorization': z.string().optional().describe("Token for authentication (OpenAI format)"),
                 'x-api-key': z.string().optional().describe("API key for authentication (Claude format)"),
             }),
-            body: contentJson(z.any()),
+            body: { content: {
+                'application/json': { schema: z.any() },
+                'multipart/form-data': { schema: z.object({ model: z.string() }).passthrough() },
+            } },
         },
         responses: {
             200: {
@@ -61,4 +64,9 @@ api.post("/v1/chat/completions", UnifiedProxyEndpoint)
 api.post("/v1/messages", UnifiedProxyEndpoint)
 api.post("/v1/responses", UnifiedProxyEndpoint)
 api.post("/v1/audio/speech", UnifiedProxyEndpoint)
+api.post("/v1/images/generations", UnifiedProxyEndpoint)
+api.post("/v1/images/edits", UnifiedProxyEndpoint)
+api.post("/v1/audio/transcriptions", UnifiedProxyEndpoint)
+api.post("/v1/audio/translations", UnifiedProxyEndpoint)
+api.post("/v1/rerank", UnifiedProxyEndpoint)
 api.get("/v1/models", ModelsEndpoint)

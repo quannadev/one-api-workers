@@ -68,12 +68,14 @@ export const resolveChannel = async (
 
     let requestBody: any;
     try {
-        requestBody = await c.req.json();
+        requestBody = c.req.header("content-type")?.startsWith("multipart/form-data")
+            ? await c.req.formData()
+            : await c.req.json();
     } catch (error) {
         return c.text("Invalid JSON body", 400);
     }
-    const requestedModel = requestBody.model;
-    if (!requestedModel) {
+    const requestedModel = requestBody instanceof FormData ? requestBody.get("model") : requestBody?.model;
+    if (typeof requestedModel !== "string" || !requestedModel) {
         return c.text("Model is required", 400);
     }
 

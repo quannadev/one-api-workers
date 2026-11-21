@@ -65,6 +65,16 @@ const buildChannelRequestBody = (
     requestBody: any,
     channel: ResolvedChannelCandidate
 ) => {
+    if (requestBody instanceof FormData) {
+        const body = new FormData();
+        const defaults = getModelDefaultParams(channel.mapping);
+        for (const [key, value] of Object.entries(defaults || {})) {
+            if (!requestBody.has(key)) body.append(key, typeof value === "string" ? value : JSON.stringify(value));
+        }
+        for (const [key, value] of requestBody.entries()) body.append(key, value);
+        body.set("model", channel.mapping.id);
+        return body;
+    }
     const runtimeRequestBody = cloneRequestBody(requestBody);
     if (runtimeRequestBody && typeof runtimeRequestBody === "object") {
         const defaultParams = getModelDefaultParams(channel.mapping);
