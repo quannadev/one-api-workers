@@ -41,7 +41,7 @@ class UnifiedProxyEndpoint extends OpenAPIRoute {
         const result = await resolveChannel(c, routeId)
         if (result instanceof Response) return result
 
-        const { channels, initialChannel, requestBody, saveUsage, logFailure, trackingState, setActiveChannel } = result
+        const { channels, initialChannel, requestBody, saveUsage, logFailure, trackingState, setActiveChannel, fallbackOrder } = result
 
         return executeWithFallbackChannels(
             c,
@@ -52,6 +52,7 @@ class UnifiedProxyEndpoint extends OpenAPIRoute {
             logFailure,
             trackingState,
             setActiveChannel,
+            fallbackOrder,
         )
     }
 }

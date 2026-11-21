@@ -13,6 +13,7 @@ import {
   AdminLoginResponse,
   UsageLogFilters,
   UsageLogSearchData,
+  ModelCombo,
 } from '@/types'
 import { clearAdminCredentials } from '@/lib/admin-auth'
 import i18n, { getCurrentLanguage } from '@/i18n'
@@ -223,6 +224,18 @@ export const apiClient = {
 
   deleteChannel: (key: string) =>
     request(`/api/admin/channel/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+
+  // Model combo APIs
+  getModelCombos: () => request<ApiResponse<ModelCombo[]>>('/api/admin/models', { method: 'GET' }),
+
+  saveModelCombo: (combo: Omit<ModelCombo, 'enabled'> & { enabled?: boolean }) =>
+    request<ApiResponse<ModelCombo>>('/api/admin/models', {
+      method: 'POST',
+      body: JSON.stringify(combo),
+    }),
+
+  deleteModelCombo: (modelName: string) =>
+    request<ApiResponse<boolean>>(`/api/admin/models/${encodeURIComponent(modelName)}`, { method: 'DELETE' }),
 
   // Token APIs
   getTokens: () => request<ApiResponse>('/api/admin/token', { method: 'GET' }),

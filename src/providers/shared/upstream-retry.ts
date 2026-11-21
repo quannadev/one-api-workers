@@ -124,17 +124,20 @@ const pickRetryKey = (
 
 const pickNextFallbackChannel = (
     channels: ResolvedChannelCandidate[],
-    attemptedChannelKeys: Set<string>
+    attemptedChannels: Set<ResolvedChannelCandidate>,
+    fallbackOrder: "priority" | "round_robin" = "priority"
 ): ResolvedChannelCandidate | null => {
     const remainingChannels = channels.filter((channel) => {
-        return !attemptedChannelKeys.has(channel.key);
+        return !attemptedChannels.has(channel);
     });
 
     if (remainingChannels.length === 0) {
         return null;
     }
 
-    return pickHighestPriorityChannel(remainingChannels);
+    return fallbackOrder === "round_robin"
+        ? remainingChannels[0]
+        : pickHighestPriorityChannel(remainingChannels);
 };
 
 const executeChannelWithRetries = async (
@@ -270,13 +273,14 @@ export const executeWithFallbackChannels = async (
     logFailure: (errorCode: string, errorSummary?: string) => void,
     trackingState: RequestTrackingState,
     setActiveChannel: (channel: ResolvedChannelCandidate) => void,
+    fallbackOrder: "priority" | "round_robin" = "priority",
 ): Promise<Response> => {
-    const attemptedChannelKeys = new Set<string>();
+    const attemptedChannels = new Set<ResolvedChannelCandidate>();
     let currentChannel = initialChannel;
     let fallbackCount = 0;
 
     while (true) {
-        attemptedChannelKeys.add(currentChannel.key);
+        attemptedChannels.add(currentChannel);
         setActiveChannel(currentChannel);
         trackingState.errorSummary = undefined;
 
@@ -285,7 +289,7 @@ export const executeWithFallbackChannels = async (
             const errorSummary = "Channel type not supported";
             const response = c.text(errorSummary, 400);
             const nextChannel = fallbackCount < MAX_CHANNEL_FALLBACKS
-                ? pickNextFallbackChannel(channels, attemptedChannelKeys)
+                ? pickNextFallbackChannel(channels, attemptedChannels, fallbackOrder)
                 : null;
 
             trackingState.upstreamStatus = 0;
@@ -321,7 +325,7 @@ export const executeWithFallbackChannels = async (
         }
 
         const nextChannel = execution.shouldFallback && fallbackCount < MAX_CHANNEL_FALLBACKS
-            ? pickNextFallbackChannel(channels, attemptedChannelKeys)
+            ? pickNextFallbackChannel(channels, attemptedChannels, fallbackOrder)
             : null;
 
         if (!nextChannel) {

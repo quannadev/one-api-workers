@@ -11,6 +11,18 @@ export interface ChannelModelMapping {
   default_params?: Record<string, unknown>
 }
 
+export interface ModelComboEntry {
+  channel_key: string
+  model_id: string
+}
+
+export interface ModelCombo {
+  model_name: string
+  model_id: string
+  provider_models: ModelComboEntry[]
+  enabled: boolean
+}
+
 export interface ChannelConfig {
   name: string
   type: 'openai' | 'gemini' | 'azure-openai' | 'openai-audio' | 'azure-openai-audio' | 'claude' | 'claude-to-openai' | 'openai-responses' | 'azure-openai-responses'

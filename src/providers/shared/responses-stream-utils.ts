@@ -121,4 +121,5 @@ export const checkoutResponsesUsageData = async (
     }
 }
 
-export { OpenAIResponsesResponse, extractUsageFromResponse, estimateUsageFromBodies }
+export type { OpenAIResponsesResponse }
+export { extractUsageFromResponse, estimateUsageFromBodies }

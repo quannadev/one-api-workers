@@ -24,6 +24,15 @@ CREATE TABLE IF NOT EXISTS settings (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS model_combo (
+    model_name TEXT PRIMARY KEY,
+    model_id TEXT NOT NULL UNIQUE,
+    provider_models TEXT NOT NULL DEFAULT '[]',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    round_robin_cursor INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS admin_login_challenge (
     id TEXT PRIMARY KEY,
     code_hash TEXT NOT NULL,

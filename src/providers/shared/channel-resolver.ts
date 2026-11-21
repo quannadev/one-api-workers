@@ -5,6 +5,7 @@ import { findChannelModelMapping, getJsonSetting } from "../../utils"
 import { CONSTANTS } from "../../constants"
 import { TokenUtils } from "../../admin/token_utils"
 import { normalizeChannelConfig } from "../../channel-config"
+import { claimModelComboStartIndex, findComboModelMapping, getComboBillingModel, parseModelComboEntries, rotateModelComboEntries } from "../../model-combos"
 import {
     buildUsageRequestMetadata,
     hashTokenKey,
@@ -16,6 +17,7 @@ export type ResolvedChannelCandidate = {
     key: string
     config: ChannelConfig
     mapping: ChannelModelMapping
+    billingModel?: string
 }
 
 export type ChannelResolution = {
@@ -26,6 +28,7 @@ export type ChannelResolution = {
     logFailure: (errorCode: string, errorSummary?: string) => void
     trackingState: RequestTrackingState
     setActiveChannel: (channel: ResolvedChannelCandidate) => void
+    fallbackOrder: "priority" | "round_robin"
 }
 
 export const pickHighestPriorityChannel = (
@@ -79,8 +82,60 @@ export const resolveChannel = async (
 
     let availableChannels: ResolvedChannelCandidate[] = [];
     let hasDisabledMatchingChannel = false;
+    let fallbackOrder: ChannelResolution["fallbackOrder"] = "priority";
 
-    for (const row of channelsResult.results) {
+    const comboRow = await c.env.DB.prepare(
+        `SELECT model_id, provider_models
+         FROM model_combo WHERE model_id = ? AND enabled = 1`
+    ).bind(requestedModel).first<{ model_id: string; provider_models: string }>();
+
+    if (comboRow) {
+        const entries = parseModelComboEntries(comboRow.provider_models);
+        if (entries.length === 0) {
+            return c.text(`Model combo has no provider models: ${requestedModel}`, 503);
+        }
+        const startIndex = await claimModelComboStartIndex(c.env.DB, requestedModel, entries.length);
+        if (startIndex === null) {
+            return c.text(`Model combo is unavailable: ${requestedModel}`, 503);
+        }
+
+        const rowsByKey = new Map((channelsResult.results || []).map((row) => [row.key, row]));
+        for (const entry of rotateModelComboEntries(entries, startIndex)) {
+            const row = rowsByKey.get(entry.channel_key);
+            if (!row) continue;
+
+            const config = (() => {
+                try {
+                    return normalizeChannelConfig(JSON.parse(row.value) as ChannelConfig);
+                } catch {
+                    return null;
+                }
+            })();
+            if (!config) continue;
+            if (allowedTypes && (!config.type || !allowedTypes.includes(config.type))) continue;
+            if (!config.enabled) {
+                hasDisabledMatchingChannel = true;
+                continue;
+            }
+
+            const sourceMapping = findComboModelMapping(config, entry.model_id);
+            if (!sourceMapping) continue;
+            const mapping: ChannelModelMapping = {
+                ...(sourceMapping || {}),
+                id: entry.model_id,
+                name: requestedModel,
+                enabled: true,
+            };
+            const billingModel = await getComboBillingModel(c, requestedModel, sourceMapping, config);
+            availableChannels.push({ key: row.key, config, mapping, billingModel });
+        }
+        if (availableChannels.length === 0) {
+            return c.text(`No enabled channels available for model combo: ${requestedModel}`, 503);
+        }
+        fallbackOrder = "round_robin";
+    }
+
+    if (!comboRow) for (const row of channelsResult.results) {
         const config = (() => {
             try {
                 return normalizeChannelConfig(JSON.parse(row.value) as ChannelConfig);
@@ -142,7 +197,7 @@ export const resolveChannel = async (
         const freeChannels = await Promise.all(
             availableChannels.map(async (channel) => ({
                 channel,
-                requiresPaidQuota: await TokenUtils.modelRequiresPaidQuota(c, requestedModel, channel.config, globalPricing),
+                requiresPaidQuota: await TokenUtils.modelRequiresPaidQuota(c, channel.billingModel || requestedModel, channel.config, globalPricing),
             }))
         );
 
@@ -155,7 +210,9 @@ export const resolveChannel = async (
         }
     }
 
-    const selectedChannel = pickHighestPriorityChannel(availableChannels);
+    const selectedChannel = fallbackOrder === "round_robin"
+        ? availableChannels[0]
+        : pickHighestPriorityChannel(availableChannels);
     const trackingState: RequestTrackingState = {
         retryCount: 0,
     };
@@ -204,7 +261,7 @@ export const resolveChannel = async (
             const costResult = await TokenUtils.processUsage(
                 c,
                 apiKey,
-                requestedModel,
+                activeChannel.billingModel || requestedModel,
                 activeChannel.key,
                 activeChannel.config,
                 usage
@@ -241,5 +298,6 @@ export const resolveChannel = async (
         logFailure,
         trackingState,
         setActiveChannel,
+        fallbackOrder,
     };
 }

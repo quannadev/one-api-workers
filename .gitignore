@@ -36,3 +36,6 @@ bun.lock
 .zcode
 # Personal / WIP notes under docs; keep published markdown tracked
 docs/0.next.md
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

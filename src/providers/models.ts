@@ -6,6 +6,7 @@ import { getChannelModels, getJsonSetting } from "../utils";
 import { normalizeChannelConfig } from "../channel-config";
 import { TokenUtils } from "../admin/token_utils";
 import { CONSTANTS } from "../constants";
+import { findComboModelMapping, getComboBillingModel, parseModelComboEntries } from "../model-combos";
 
 export class ModelsEndpoint extends OpenAPIRoute {
     schema = {
@@ -82,6 +83,34 @@ export class ModelsEndpoint extends OpenAPIRoute {
                     continue;
                 }
                 modelsSet.add(model.name);
+            }
+        }
+
+        const comboRows = await c.env.DB.prepare(
+            `SELECT model_id, provider_models FROM model_combo WHERE enabled = 1 ORDER BY model_id`
+        ).all<{ model_id: string; provider_models: string }>();
+        const allowedChannels = new Map(
+            (channelsResult.results || []).flatMap((row): [string, ChannelConfig][] => {
+                try {
+                    const config = normalizeChannelConfig(JSON.parse(row.value) as ChannelConfig);
+                    return config.enabled ? [[row.key, config]] : [];
+                } catch {
+                    return [];
+                }
+            })
+        );
+        for (const combo of comboRows.results || []) {
+            for (const entry of parseModelComboEntries(combo.provider_models)) {
+                const config = allowedChannels.get(entry.channel_key);
+                if (!config) continue;
+                const mapping = findComboModelMapping(config, entry.model_id);
+                if (!mapping) continue;
+                if (!hasRemainingQuota) {
+                    const billingModel = await getComboBillingModel(c, combo.model_id, mapping, config, globalPricing);
+                    if (await TokenUtils.modelRequiresPaidQuota(c, billingModel, config, globalPricing)) continue;
+                }
+                modelsSet.add(combo.model_id);
+                break;
             }
         }
 

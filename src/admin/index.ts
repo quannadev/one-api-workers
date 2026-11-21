@@ -31,6 +31,7 @@ import {
     AnalyticsEventsEndpoint,
     UsageLogSearchEndpoint,
 } from "./analytics_api"
+import { ModelComboDeleteEndpoint, ModelComboGetEndpoint, ModelComboUpsertEndpoint } from "./model_combo_api"
 import { getSystemConfig, isTelegramSecurityEnabled } from "../system-config"
 import { t } from "../i18n"
 import {
@@ -99,6 +100,9 @@ api.get("/api/admin/channel", ChannelGetEndpoint)
 api.post("/api/admin/channel/:key", ChannelUpsertEndpoint)
 api.delete("/api/admin/channel/:key", ChannelDeleteEndpoint)
 api.post("/api/admin/channel/models/fetch", ChannelFetchModelsEndpoint)
+api.get("/api/admin/models", ModelComboGetEndpoint)
+api.post("/api/admin/models", ModelComboUpsertEndpoint)
+api.delete("/api/admin/models/:modelName", ModelComboDeleteEndpoint)
 
 // Token management routes
 api.get("/api/admin/token", TokenListEndpoint)
