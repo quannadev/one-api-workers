@@ -25,8 +25,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "one-api-workers",
-      "database_id": "5d429962-32e6-4895-8d40-467237292800"
+      "database_name": "one-ai-gateway",
+      "database_id": "2533336f-1bd2-4fe9-b37c-92732cd9ba60"
     }
   ],
   "analytics_engine_datasets": [
