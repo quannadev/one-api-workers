@@ -2,7 +2,7 @@ import { Context } from "hono";
 import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { getApiKeyFromHeaders, fetchTokenData, fetchChannelsForToken } from "./shared/auth";
-import { getChannelModels, getJsonSetting } from "../utils";
+import { getJsonSetting } from "../utils";
 import { normalizeChannelConfig } from "../channel-config";
 import { TokenUtils } from "../admin/token_utils";
 import { CONSTANTS } from "../constants";
@@ -13,6 +13,7 @@ export class ModelsEndpoint extends OpenAPIRoute {
         tags: ['OpenAI Proxy'],
         summary: 'List available models',
         request: {
+            query: z.object({ key: z.string().optional() }),
             headers: z.object({
                 'Authorization': z.string().optional().describe("Token for authentication (OpenAI format)"),
                 'x-api-key': z.string().optional().describe("API key for authentication (Claude format)"),
@@ -39,7 +40,7 @@ export class ModelsEndpoint extends OpenAPIRoute {
     };
 
     async handle(c: Context<HonoCustomType>) {
-        const apiKey = getApiKeyFromHeaders(c);
+        const apiKey = getApiKeyFromHeaders(c) || c.req.query('key')?.trim();
         if (!apiKey) {
             return c.json({ object: "list", data: [] });
         }
@@ -64,27 +65,6 @@ export class ModelsEndpoint extends OpenAPIRoute {
         const globalPricing = hasRemainingQuota
             ? null
             : await getJsonSetting<Record<string, ModelPricing>>(c, CONSTANTS.MODEL_PRICING_KEY);
-
-        for (const row of channelsResult.results) {
-            let config: ChannelConfig;
-
-            try {
-                config = normalizeChannelConfig(JSON.parse(row.value) as ChannelConfig);
-            } catch (error) {
-                console.error(`Invalid channel config for key: ${row.key}`, error);
-                continue;
-            }
-
-            if (!config.enabled) {
-                continue;
-            }
-            for (const model of getChannelModels(config)) {
-                if (!hasRemainingQuota && await TokenUtils.modelRequiresPaidQuota(c, model.name, config, globalPricing)) {
-                    continue;
-                }
-                modelsSet.add(model.name);
-            }
-        }
 
         const comboRows = await c.env.DB.prepare(
             `SELECT model_id, provider_models FROM model_combo WHERE enabled = 1 ORDER BY model_id`
