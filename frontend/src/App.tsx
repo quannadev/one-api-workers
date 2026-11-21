@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Analytics } from "./pages/Analytics";
 import { UsageLogs } from "./pages/UsageLogs";
 import { Channels } from "./pages/Channels";
+import { ModelCombos } from "./pages/ModelCombos";
 import { Tokens } from "./pages/Tokens";
 import { Pricing } from "./pages/Pricing";
 import { ApiTest } from "./pages/ApiTest";
@@ -102,6 +103,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Channels createMode />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/model-combos"
+              element={
+                <ProtectedRoute>
+                  <ModelCombos />
                 </ProtectedRoute>
               }
             />

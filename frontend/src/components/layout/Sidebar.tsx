@@ -43,6 +43,7 @@ interface NavItem {
 const navItemDefs: NavItem[] = [
   { titleKey: "sidebar.dashboard", href: "/dashboard", icon: BarChart3, group: "overview" },
   { titleKey: "sidebar.channels", href: "/channels", icon: LinkIcon, group: "management" },
+  { titleKey: "modelCombos.title", href: "/model-combos", icon: GitBranch, group: "management" },
   { titleKey: "sidebar.tokens", href: "/tokens", icon: Key, group: "management" },
   { titleKey: "sidebar.pricing", href: "/pricing", icon: DollarSign, group: "management" },
   { titleKey: "sidebar.usageLogs", href: "/usage-logs", icon: FileText, group: "tools" },
